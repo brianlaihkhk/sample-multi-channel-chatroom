@@ -7,16 +7,22 @@ Coding sample - Multi-channel chatroom - Submitted by Brian Lai
 - Support guest join-in
 - Old chat data will be persisted, user is able to load pervious conversions when scrolling
 - Secure communication between client and server using encrypted e2e message
+- Use message broker instead of CURD operation in controller service for mass scale out capability
 - Cloud ready and Docker ready solution
+- Written in typescript to provide capability for DI / IoC
 
 ### Framework 
 
 - [Client]
     - angularJs
-    - react-script
 
-- [Control (Handle user registeration and client chat message)]
+- [Control (Handle user registeration, client chat message, archive message retrieve)]
     - nodeJs
+    - expressJs
+    - passportJs
+    - crypto (Password encryption using salt + hash)
+    - jsonwebtoken (JWT for session + auth token)
+    - Mongoose
     - kafkaJs (if using Apache Kafka / AWS MSK)
     - AWS.kinesis (if using AWS Kinesis)
     - (AWS Solution) Serverless
@@ -24,15 +30,15 @@ Coding sample - Multi-channel chatroom - Submitted by Brian Lai
 
 - [Broadcast (Broadcast client chat message)] - non-AWS solution only
     - nodeJs
+    - expressJs
     - kafkaJs (if using Apache Kafka)
     - AWS.kinesis (if using AWS Kinesis)
     - Websocket
     - Docker
 
-- [Message (Message archieve retriever)]
-    - nodeJs
-    - kafkaJs
-    - Mongoose
+- [Message (Store message to MongoDB from message broker)]
+    - kafkaJs (if using Apache Kafka / AWS MSK)
+    - AWS.kinesis (if using AWS Kinesis)
     - (AWS Solution) Serverless
     - (non-AWS Solution) Docker
 
@@ -42,22 +48,22 @@ Coding sample - Multi-channel chatroom - Submitted by Brian Lai
     - (Registration) Client <-> Control
     - (Send message) Client <-> Control <-> AWS Kinesis / AWS MSK / Apache Kafka
     - (Receive message) AWS Kinesis / AWS MSK / Apache Kafka <-> **AWS ApiGateway** <-> Client
-    - (Store archieve) AWS Kinesis / AWS MSK / Apache Kafka <-> Message <-> MongoDB
-    - (Load archieve) Client <-> Message <-> MongoDB
+    - (Store archive) AWS Kinesis / AWS MSK / Apache Kafka <-> Message <-> MongoDB
+    - (Load archive) Client <-> Control <-> MongoDB
 
 - [non-AWS solution]
     - (Registration) Client <-> Control
     - (Send message) Client <-> Control <-> Apache Kafka
     - (Receive message) Apache Kafka <-> **Broadcast** <-> Client
-    - (Store archieve) Apache Kafka <-> Message <-> MongoDB
-    - (Load archieve) Client <-> Message <-> MongoDB
+    - (Store archive) Apache Kafka <-> Message <-> MongoDB
+    - (Load archive) Client <-> Control <-> MongoDB
 
 ### Folder
 
 - Client : Frontend-UI
 - Control : Handler for client request (Registration / Login / Channel management / Send message to Kafka / Kinesis)
 - Broadcast : Require if using Kafka. Broadcast message to client using websocket
-- Message : Message archieve retriever. Load previous message
+- Message : Store message from Kinesis or Kafka to MongoDB
 - Deploy : Deployment script
 - Tools : Tools for encryption, encoding and local server script for testing
 - Setup : Setup script for database initialization
@@ -98,14 +104,15 @@ Coding sample - Multi-channel chatroom - Submitted by Brian Lai
    - /register
    - /login
    - /session
-   - /channel/`uuid`
-   - /message/`uuid`
+   - /user
+   - /user/`user_id`
+   - /channel
+   - /channel/?title=`title`&limit=`limit`&start=`start`
+   - /channel/`channel_id`
+   - /message/`channel_id`/?before=`time`&limit=`limit`&start=`start`
 
 - Broadcast
-   - /listen/`uuid`
-
-- Message
-   - /archieve/`uuid`/`from_time_in_epoch_format`
+   - /listen/`channel_id`
 
 ### Technical Assessment Requirement
 

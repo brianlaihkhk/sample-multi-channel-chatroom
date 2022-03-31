@@ -6,7 +6,8 @@ Coding sample - Multi-channel chatroom - Submitted by Brian Lai
 - Registered user is able to create / manage / delete their channel
 - Support guest join-in
 - Old chat data will be persisted, user is able to load pervious conversions when scrolling
-- Secure communication between client and server using encrypted e2e message
+- Secure communication between client and server using channel key
+- Channel key will be refresh when user leave the channel
 - Use message broker instead of CURD operation in controller service for mass scale out capability
 - Cloud ready and Docker ready solution
 
@@ -15,26 +16,27 @@ Coding sample - Multi-channel chatroom - Submitted by Brian Lai
 - [Client]
     - angularJs
 
-- [Control (Handle user registeration, client chat message, archive message retrieve)]
+- [Control (Handle user registeration, guest / user login, and archive message retrieve)]
     - nodeJs
-    - expressJs
+    - express
     - passportJs
     - crypto (Password encryption using salt + hash)
     - jsonwebtoken (JWT for session + auth token)
     - Mongoose
     - Docker
 
-- [Chat (Broadcast client chat message)] - non-AWS solution only
+- [Chat (Receive and broadcast client chat message)]
     - nodeJs
-    - expressJs
+    - express
     - express-ws
-    - aws-sdk
     - amqplib
+    - Mongoose
     - Docker
 
 - [Message (Store message to MongoDB from message broker)]
-    - aws-sdk
+    - nodeJs
     - amqplib
+    - Mongoose
     - Docker
 
 ### Flow
@@ -107,8 +109,8 @@ Coding sample - Multi-channel chatroom - Submitted by Brian Lai
 | /channel/?title=`title`&limit=`limit`&start=`start`      |  GET |
 | /channel/`channel_id`      |  GET, POST, DELETE |
 | /channel/`channel_id`/`user_id`      |  POST, DELETE |
-| /message/`channel_id`/      |  GET, POST |
-| /message/`channel_id`/?before=`time`&limit=`limit`&start=`start`      |  GET |
+| /key/`channel_id`      |  GET |
+| /archive/`channel_id`/?before=`time`&limit=`limit`&start=`start`      |  GET |
 
 
 - Chat

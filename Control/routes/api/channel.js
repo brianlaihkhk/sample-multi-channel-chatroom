@@ -144,7 +144,7 @@ router.delete('/channel/:channelId/:userId', auth.required, function(req, res, n
                     return res.sendStatus(401);
                 }
 
-                if (channel.members.indexOf(targetUser._id) > -1) {
+                if (channel.members.indexOf(targetUser._id) > -1 || requestUser._id == channel.creator) {
                     channel.members.splice(channel.members.indexOf(targetUser._id), 1)
                 }
                 if (targetUser.channel.indexOf(channel._id) > -1) {

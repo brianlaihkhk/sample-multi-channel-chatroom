@@ -6,7 +6,7 @@ var auth = require('../auth');
 
 
 // Channel search
-router.get('/message/:channelId', function(req, res, next){
+router.get('/key/:channelId', function(req, res, next){
     var channelId = req.channelId;
 
     passport.authenticate('local', {session: false}, function(err, requestUser, info) {
@@ -18,25 +18,8 @@ router.get('/message/:channelId', function(req, res, next){
     })(req, res, next);
 });
   
-
-// post message to message queue
-router.post('/message/:channelId', auth.required, function(req, res, next){
-    var channelId = req.channelId;
-
-    passport.authenticate('local', {session: false}, function(err, requestUser, info) {
-        if(err){ return next(err); }
-    
-        if(requestUser && requestUser.channel.indexOf(channelId) > -1){
-            var res = await this.sendMessage(req.query.message, channelId);
-            return next("Success");
-        } else {
-            return res.status(422).json(info);
-        }
-    })(req, res, next);
-});
-
 // Message search
-router.get('/message/:channelId', auth.required, function(req, res, next){
+router.get('/archive/:channelId', auth.required, function(req, res, next){
     var date = new Date();
     var limit = req.query.limit ? req.query.limit : 20;
     var start = req.query.start ? req.query.start : 0;

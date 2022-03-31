@@ -25,8 +25,7 @@ Coding sample - Multi-channel chatroom - Submitted by Brian Lai
     - Mongoose
     - kafkaJs (if using Apache Kafka / AWS MSK)
     - AWS.kinesis (if using AWS Kinesis)
-    - (AWS Solution) Serverless
-    - (non-AWS Solution) Docker
+    - Docker
 
 - [Broadcast (Broadcast client chat message)] - non-AWS solution only
     - nodeJs
@@ -39,8 +38,7 @@ Coding sample - Multi-channel chatroom - Submitted by Brian Lai
 - [Message (Store message to MongoDB from message broker)]
     - kafkaJs (if using Apache Kafka / AWS MSK)
     - AWS.kinesis (if using AWS Kinesis)
-    - (AWS Solution) Serverless
-    - (non-AWS Solution) Docker
+    - Docker
 
 ### Flow
 
@@ -101,18 +99,23 @@ Coding sample - Multi-channel chatroom - Submitted by Brian Lai
 - For further information please refer to Documentation folder
 
 - Control
-   - /register
-   - /login
-   - /session
-   - /user
-   - /user/`user_id`
-   - /channel
-   - /channel/?title=`title`&limit=`limit`&start=`start`
-   - /channel/`channel_id`
-   - /message/`channel_id`/?before=`time`&limit=`limit`&start=`start`
+| Endpoint      | Request type |
+| --------- | -----:|
+| /register  | POST |
+| /login     |   POST |
+| /guest      |  POST |
+| /user      |  GET, POST, PUT |
+| /user/`user_id`      |  GET |
+| /channel/?title=`title`&limit=`limit`&start=`start`      |  GET |
+| channel/`channel_id`      |  POST, DELETE |
+| channel/`channel_id`/`user_id`      |  POST, DELETE |
+| /message/`channel_id`/?before=`time`&limit=`limit`&start=`start`      |  GET |
+
 
 - Broadcast
-   - /listen/`channel_id`
+| Endpoint      | Request type |
+| --------- | -----:|
+| /listen/`channel_id`  | WS |
 
 ### Technical Assessment Requirement
 
@@ -126,6 +129,37 @@ Coding sample - Multi-channel chatroom - Submitted by Brian Lai
 ### Time limit
 
 - 72 hours
+
+### Q&A
+
+- Kafka or Kinesis?
+    - Kafka
+        - Pre-front setup cost (hardware)
+        - Initial cost on setup, additional cost only if you want to setup clusters
+        - No cost on adding partition
+        - TTL can change depends on retention policy
+
+    - Kinesis 
+        - No pre-front setup cost
+        - Initial cost is low, but additional cost will rapily increase compare to Kafka
+        - Each shard throughput is 1MB / Fan-out 2MB (~1000 messages/sec for 1KB message each)
+        - Adding shard (Partition) costs more when your topics need replica / fault tolerance
+        - Black-box design. No documentation on Kinesis architecture
+        - TTL is fixed on 7 days. Cannot change
+
+- AWS or no-AWS?
+    - AWS
+        - Boardcast server can be skipped if using AWS ApiGateway
+        - Message server can be skipped if using AWS Firehose + MongoDB cloud
+        - Save deployment and maintenance effort using ECS / Kubernetes / Terraform
+        - Not suggest to use AWS Lambda as (1) Lambda only supports single endpoint per script, (2) Costly if using as Boardcast and Message server
+
+    - non-AWS
+        - Need to build your Kubnernetes for container orchestration
+        - Need to setup Boardcast and Message server
+        - Fit for on-prem design
+        - More deployment and maintenance effort like server troubleshooting
+
 
 ### Contact
 - Linkedin : https://linkedin.com/in/brianlaihkhk/

@@ -100,7 +100,7 @@ Coding sample - Multi-channel chatroom - Submitted by Brian Lai
 
 - Control
 | Endpoint      | Request type |
-| --------- | -----:|
+| --- | --- |
 | /register  | POST |
 | /login     |   POST |
 | /guest      |  POST |
@@ -114,7 +114,7 @@ Coding sample - Multi-channel chatroom - Submitted by Brian Lai
 
 - Broadcast
 | Endpoint      | Request type |
-| --------- | -----:|
+| --- | --- |
 | /listen/`channel_id`  | WS |
 
 ### Technical Assessment Requirement
@@ -152,7 +152,9 @@ Coding sample - Multi-channel chatroom - Submitted by Brian Lai
         - Boardcast server can be skipped if using AWS ApiGateway
         - Message server can be skipped if using AWS Firehose + MongoDB cloud
         - Save deployment and maintenance effort using ECS / Kubernetes / Terraform
-        - Not suggest to use AWS Lambda as (1) Lambda only supports single endpoint per script, (2) Costly if using as Boardcast and Message server
+        - Not suggest to use AWS Lambda as
+            - (1) Lambda only supports single endpoint per script, 
+            - (2) Costly if using as Boardcast and Message server
 
     - non-AWS
         - Need to build your Kubnernetes for container orchestration

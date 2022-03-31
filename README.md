@@ -99,8 +99,8 @@ Coding sample - Multi-channel chatroom - Submitted by Brian Lai
 - For further information please refer to Documentation folder
 
 - Control
-| Endpoint      | Request type |
-| --- | --- |
+| Endpoint        | Request type           |
+| ------------- | ----- |
 | /register  | POST |
 | /login     |   POST |
 | /guest      |  POST |
@@ -113,8 +113,8 @@ Coding sample - Multi-channel chatroom - Submitted by Brian Lai
 
 
 - Broadcast
-| Endpoint      | Request type |
-| --- | --- |
+| Endpoint        | Request type           |
+| ------------- | ----- |
 | /listen/`channel_id`  | WS |
 
 ### Technical Assessment Requirement

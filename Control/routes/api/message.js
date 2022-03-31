@@ -1,22 +1,53 @@
 var router = require('express').Router();
 var mongoose = require('mongoose');
 var Message = mongoose.model('Message');
-var User = mongoose.model('User');
+var Channel = mongoose.model('Channel');
 var auth = require('../auth');
 
 
-// Message search
+// Channel search
 router.get('/message/:channelId', function(req, res, next){
-    var limit = req.query.limit ? req.query.limit : 20;
-    var start = req.query.start ? req.query.start : 0;
-    var before = req.query.before ? req.query.before : Date.now();
-    var channelId = req.query.channelId;
+    var channelId = req.channelId;
+
+    passport.authenticate('local', {session: false}, function(err, requestUser, info) {
+        Channel.findById(channelId).then(function(channel){
+            if(err){ return next(err); }
+
+            return res.json({channel: channel.getKey(requestUser)});
+        }).catch(next);
+    })(req, res, next);
+});
+  
+
+// post message to message queue
+router.post('/message/:channelId', auth.required, function(req, res, next){
+    var channelId = req.channelId;
 
     passport.authenticate('local', {session: false}, function(err, requestUser, info) {
         if(err){ return next(err); }
     
         if(requestUser && requestUser.channel.indexOf(channelId) > -1){
-            Channel.find({ 'createdAt': { '$lt': before} }).start(start).limit(limit).then(function(messageList){
+            var res = await this.sendMessage(req.query.message, channelId);
+            return next("Success");
+        } else {
+            return res.status(422).json(info);
+        }
+    })(req, res, next);
+});
+
+// Message search
+router.get('/message/:channelId', auth.required, function(req, res, next){
+    var date = new Date();
+    var limit = req.query.limit ? req.query.limit : 20;
+    var start = req.query.start ? req.query.start : 0;
+    var before = req.query.before ? date.setUTCMilliseconds(req.query.before) : date;
+    var channelId = req.channelId;
+
+    passport.authenticate('local', {session: false}, function(err, requestUser, info) {
+        if(err){ return next(err); }
+    
+        if(requestUser && requestUser.channel.indexOf(channelId) > -1){
+            Message.find({ 'channel' : channelId, 'createdAt': { '$lt': before} }).start(start).limit(limit).then(function(messageList){
                 return res.json({message: messageList.map(message => message.toJson())});
             });
         } else {
@@ -24,3 +55,6 @@ router.get('/message/:channelId', function(req, res, next){
         }
     })(req, res, next);
 });
+
+
+module.exports = router;

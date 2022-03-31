@@ -4,12 +4,12 @@ var passport = require('passport');
 var User = mongoose.model('User');
 var auth = require('../auth');
 
-router.get('/user/:id', auth.required, function(req, res, next){
+router.get('/user/:userId', auth.required, function(req, res, next){
   passport.authenticate('local', {session: false}, function(err, user, info){
     if(err){ return next(err); }
     if(user){
 
-      User.findById(req.id).then(function(targetUser){
+      User.findById(req.userId).then(function(targetUser){
         if(!targetUser){
           return res.sendStatus(401);
         }

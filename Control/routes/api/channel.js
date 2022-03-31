@@ -18,13 +18,16 @@ router.get('/channel', function(req, res, next){
     });
 });
   
-router.get('/channel/:id', function(req, res, next){
-    var id = req.query.id;
+router.get('/channel/:channelId', function(req, res, next){
+    var channelId = req.channelId;
 
-    Channel.findById(id).then(function(channel){
-        return res.json({channel: channel.toJson()});
-    }).catch(next);
+    passport.authenticate('local', {session: false}, function(err, requestUser, info) {
+        Channel.findById(channelId).then(function(channel){
+            if(err){ return next(err); }
 
+            return res.json({channel: channel.getChannel(requestUser)});
+        }).catch(next);
+    })(req, res, next);
 });
 
 // Create channel (Public)
@@ -58,12 +61,12 @@ router.post('/channel', auth.required, function(req, res, next) {
 });
 
 // Join channel (Public)
-router.post('/channel/:id', auth.required, function(req, res, next){
+router.post('/channel/:channelId', auth.required, function(req, res, next){
     passport.authenticate('local', {session: false}, function(err, requestUser, info) {
         if(err){ return next(err); }
     
         if(requestUser){
-            Channel.findById(req.id).then(function(channel){
+            Channel.findById(req.channelId).then(function(channel){
                 if(!channel.private){
                   return res.sendStatus(401);
                 }
@@ -85,14 +88,14 @@ router.post('/channel/:id', auth.required, function(req, res, next){
 });
 
 // Add specific user to channel
-router.post('/channel/:id/:user', auth.required, function(req, res, next){
+router.post('/channel/:channelId/:userId', auth.required, function(req, res, next){
     passport.authenticate('local', {session: false}, function(err, requestUser, info) {
         if(err){ return next(err); }
     
         if(requestUser){
             Promise.all([
-                Channel.findById(req.id).exec(),
-                User.findById(req.user).exec()
+                Channel.findById(req.channelId).exec(),
+                User.findById(req.userId).exec()
             ]).then(function(results){
                 var channel = results[0];
                 var targetUser = results[1];
@@ -121,14 +124,14 @@ router.post('/channel/:id/:user', auth.required, function(req, res, next){
 });
 
 // delete specific user from channel
-router.delete('/channel/:id/:user', auth.required, function(req, res, next){
+router.delete('/channel/:channelId/:userId', auth.required, function(req, res, next){
     passport.authenticate('local', {session: false}, function(err, requestUser, info) {
         if(err){ return next(err); }
     
         if(requestUser){
             Promise.all([
-                Channel.findById(req.id).exec(),
-                User.findById(req.user).exec()
+                Channel.findById(req.channelId).exec(),
+                User.findById(req.userId).exec()
             ]).then(function(results){
                 var channel = results[0];
                 var targetUser = results[1];
@@ -148,6 +151,8 @@ router.delete('/channel/:id/:user', auth.required, function(req, res, next){
                     targetUser.channel.splice(targetUser.channel.indexOf(channel._id), 1)
                 }
 
+                channel.key = this.generateString(12);
+
                 Promise.all([
                     targetUser.save(),
                     channel.save()
@@ -163,13 +168,13 @@ router.delete('/channel/:id/:user', auth.required, function(req, res, next){
 });
 
 // delete channel
-router.delete('/channel/:id', auth.required, function(req, res, next){
+router.delete('/channel/:channelId', auth.required, function(req, res, next){
     passport.authenticate('local', {session: false}, function(err, requestUser, info) {
         if(err){ return next(err); }
     
         if(requestUser){
-            Channel.findById(req.id).then(function(channel){
-                if(!channel.private){
+            Channel.findById(req.channelId).then(function(channel){
+                if(requestUser._id != channel.creator){
                   return res.sendStatus(401);
                 }
 
@@ -182,3 +187,15 @@ router.delete('/channel/:id', auth.required, function(req, res, next){
         }
     })(req, res, next);
 });
+
+function generateString(length) {
+    var result           = '';
+    var characters       = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    var charactersLength = characters.length;
+    for ( var i = 0; i < length; i++ ) {
+      result += characters.charAt(Math.floor(Math.random() * charactersLength));
+    }
+    return result;
+}
+
+module.exports = router;

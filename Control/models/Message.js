@@ -6,7 +6,7 @@ var MessageSchema = new mongoose.Schema({
   channel: { type: mongoose.Schema.Types.ObjectId, ref: 'Channel' }
 }, {timestamps: true});
 
-ChannelSchema.methods.toJson = function(user){
+MessageSchema.methods.toJson = function(user){
   return {
     id: this._id,
     creator: this.creator,

@@ -89,9 +89,9 @@ router.post('/user', function(req, res, next){
 router.post('/guest', function(req, res, next){
   var user = new User();
 
-  user.username = 'guest-' + this.generateString(6);
+  user.username = 'guest-' + generateString(6);
   user.guest = true;
-  user.setPassword(this.generateString(12));
+  user.setPassword(generateString(12));
 
   user.save().then(function(){
     user.token = user.generateJWT();

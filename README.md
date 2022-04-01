@@ -136,11 +136,10 @@ Coding sample - Multi-channel chatroom - Submitted by Brian Lai
 
 - Why RabbitMQ / Amazon MQ?
     - Using MQ for internal distribution through exchange, distribute message internal to message queue
-    - Able to create anonymous queue for message broadcast / fan-out through topic
+    - Able to create / update / delete anonymous topic and queue
+    - MQ are decouple design from producer, suitable for multiple consumer but consumes offset differently
     - Kafka or AWS Kinesis are unable to create consumer group dynamically
-    - Exactly once by MQ design, while at least once by Kafka or AWS kinesis design
-
-
+    - Kafka or AWS Kinesis are couple design from producer, suitable for distributed consumer but consumes without offset adjustment frequently
 
 ### Contact
 - Linkedin : https://linkedin.com/in/brianlaihkhk/

@@ -32,7 +32,7 @@ if (!isProduction) {
 if(isProduction){
   mongoose.connect(process.env.MONGODB_URI);
 } else {
-  mongoose.connect('mongodb://localhost/multichat');
+  mongoose.connect('mongodb://control:MusicRocks+@localhost:27017/Chat');
   mongoose.set('debug', true);
 }
 

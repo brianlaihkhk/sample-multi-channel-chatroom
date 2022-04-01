@@ -6,6 +6,7 @@ var secret = require('../config').secret;
 
 var UserSchema = new mongoose.Schema({
   username: {type: String, lowercase: true, unique: true, required: [true, "can't be blank"], match: [/^[a-zA-Z0-9\-_]+$/, 'is invalid'], index: true},
+  bio: String,
   guest: Boolean,
   hash: String,
   salt: String,
@@ -32,22 +33,28 @@ UserSchema.methods.generateJWT = function() {
   return jwt.sign({
     id: this._id,
     username: this.username,
+    guest: this.guest,
     exp: parseInt(exp.getTime() / 1000),
   }, secret);
 };
 
+UserSchema.methods.getJwt = function(){
+  return {
+    token: this.generateJWT()
+  };
+};
+
 UserSchema.methods.toJson = function(){
   return {
-    id: this._id,
     username: this.username,
-    token: this.generateJWT()
+    bio : this.bio
   };
 };
 
 UserSchema.methods.toSelfJson = function(){
   return {
-    id: this._id,
     username: this.username,
+    bio: this.bio,
     token: this.generateJWT(),
     channel: this.channel
   };

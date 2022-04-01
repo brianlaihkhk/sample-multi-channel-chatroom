@@ -19,8 +19,9 @@ Coding sample - Multi-channel chatroom - Submitted by Brian Lai
 - [Control (Handle user registeration, guest / user login, and archive message retrieve)]
     - nodeJs
     - express
+    - express-jwt
     - passportJs
-    - crypto (Password encryption using salt + hash)
+    - cryptoJs
     - jsonwebtoken (JWT for session + auth token)
     - Mongoose
     - Docker
@@ -29,12 +30,14 @@ Coding sample - Multi-channel chatroom - Submitted by Brian Lai
     - nodeJs
     - express
     - express-ws
+    - cryptoJs
     - amqplib
     - Mongoose
     - Docker
 
 - [Message (Store message to MongoDB from message broker)]
     - nodeJs
+    - cryptoJs
     - amqplib
     - Mongoose
     - Docker

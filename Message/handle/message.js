@@ -1,6 +1,7 @@
 var amqp = require('amqplib');
 var Channel = mongoose.model('Channel');
 var Message = mongoose.model('Message');
+var CryptoJS = require("crypto-js");
 
 const conn = yield amqp.connect('amqp://localhost');
 var storeQueue = 'store';
@@ -18,9 +19,8 @@ function saveQueueMessage() {
                 message.creator = queueMessage.creator;
                 message.channel = queueMessage.channel;
                 message.message = CryptoJS.AES.decrypt(queueMessage.message, queueMessage.key);
-                message.save().then(function(){
-                    channel.ack(queueMessage);
-                });
+                await message.save();
+                channel.ack(queueMessage);
             } catch (e) {
                 channel.reject(queueMessage);
                 console.log(e);

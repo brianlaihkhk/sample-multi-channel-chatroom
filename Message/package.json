@@ -19,6 +19,7 @@
   "dependencies": {
     "body-parser": "1.15.0",
     "cors": "2.7.1",
+    "crypto-js" : "4.1.1",
     "ejs": "2.4.1",
     "errorhandler": "1.4.3",
     "express": "4.13.4",

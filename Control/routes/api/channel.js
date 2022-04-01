@@ -4,7 +4,6 @@ var Channel = mongoose.model('Channel');
 var User = mongoose.model('User');
 var auth = require('../auth');
 
-
 // Channel search
 router.get('/channel', function(req, res, next){
     var limit = req.query.limit ? req.query.limit : 20;
@@ -18,174 +17,145 @@ router.get('/channel', function(req, res, next){
     });
 });
   
-router.get('/channel/:channelId', function(req, res, next){
+router.get('/channel/:channelId', auth.required, async function(req, res, next){
+    var user = req.user;
     var channelId = req.channelId;
 
-    passport.authenticate('local', {session: false}, function(err, requestUser, info) {
-        Channel.findById(channelId).then(function(channel){
-            if(err){ return next(err); }
-
-            return res.json({channel: channel.getChannel(requestUser)});
-        }).catch(next);
-    })(req, res, next);
+    var channel = await Channel.findById(channelId).exec();
+    return res.json({channel: channel.getChannel(user.id)});
 });
 
 // Create channel (Public)
-router.post('/channel', auth.required, function(req, res, next) {
-    passport.authenticate('local', {session: false}, function(err, requestUser, info) {
-        if(err){ return next(err); }
-    
-        if(requestUser){
-            if (!requestUser.guest){
-                var channel = new Channel();
-                channel.creator = requestUser._id;
-                channel.title = req.body.channel.title;
-                channel.description = req.body.channel.description;
-                channel.private = req.body.channel.private;
-                channel.visible = true;
+router.post('/channel', auth.required, async function(req, res, next) {
+    var user = req.user;
 
-                requestUser.channel.pop(channel._id);
+    var requestUser = await User.findById(user.id).exec();
 
-                Promise.all([
-                    requestUser.save(),
-                    channel.save()
-                ]).then(function(results){
-                    return next("Success");
-                }).catch(next);
-            }
-            return res.sendStatus(401);
-        } else {
-            return res.status(422).json(info);
-        }
-    })(req, res, next);
+    if(requestUser && !requestUser.guest){
+        var channel = new Channel();
+        channel.creator = requestUser._id;
+        channel.title = req.body.title;
+        channel.description = req.body.description;
+        channel.private = req.body.private;
+        channel.visible = true;
+
+        await channel.save()
+        requestUser.channel.push(result._id);
+
+        await requestUser.save();
+        return next("Success");
+
+    } else {
+        return res.sendStatus(401);
+    }
+
 });
 
 // Join channel (Public)
-router.post('/channel/:channelId', auth.required, function(req, res, next){
-    passport.authenticate('local', {session: false}, function(err, requestUser, info) {
-        if(err){ return next(err); }
+router.post('/channel/:channelId', auth.required, async function(req, res, next){
+    var user = req.user;
+    var requestUser = await User.findById(user.id).exec();
     
-        if(requestUser){
-            Channel.findById(req.channelId).then(function(channel){
-                if(!channel.private){
-                  return res.sendStatus(401);
-                }
-
-                channel.members.pop(requestUser._id);
-                requestUser.channel.pop(channel._id);
-
-                Promise.all([
-                    requestUser.save(),
-                    channel.save()
-                ]).then(function(results){
-                    return next("Success");
-                }).catch(next);
-            }).catch(next);
-        } else {
-            return res.status(422).json(info);
+    if(requestUser){
+        var channel = await Channel.findById(req.channelId).exec();
+        if(!channel.private){
+            return res.sendStatus(401);
         }
-    })(req, res, next);
+
+        channel.members.push(requestUser._id);
+        requestUser.channel.push(channel._id);
+
+        await requestUser.save(),
+        await channel.save()
+
+        return next("Success");
+    } else {
+        return res.status(422).json({errors: {user: "Invalid request"}});
+    }
 });
 
 // Add specific user to channel
-router.post('/channel/:channelId/:userId', auth.required, function(req, res, next){
-    passport.authenticate('local', {session: false}, function(err, requestUser, info) {
-        if(err){ return next(err); }
+router.post('/channel/:channelId/:userId', auth.required, async function(req, res, next){
+    var user = req.user;
+    var requestUser = await User.findById(user.id).exec();
+
+    if(requestUser){
+        var channel = await Channel.findById(req.channelId).exec();
+        var targetUser = await User.findById(req.userId).exec();
     
-        if(requestUser){
-            Promise.all([
-                Channel.findById(req.channelId).exec(),
-                User.findById(req.userId).exec()
-            ]).then(function(results){
-                var channel = results[0];
-                var targetUser = results[1];
-          
-                if (channel.private && channel.creator.toString() != requestUser._id.toString()){
-                    return res.sendStatus(401);
-                }
-                if(!targetUser){
-                    return res.sendStatus(401);
-                }
-
-                channel.members.pop(targetUser._id);
-                targetUser.channel.pop(channel._id);
-
-                Promise.all([
-                    targetUser.save(),
-                    channel.save()
-                ]).then(function(results){
-                    return next("Success");
-                }).catch(next);
-            }).catch(next);
-        } else {
-            return res.status(422).json(info);
+        if (channel.private && channel.creator.toString() != requestUser._id.toString()){
+            return res.sendStatus(401);
         }
-    })(req, res, next);
+        if(!targetUser){
+            return res.sendStatus(401);
+        }
+
+        channel.members.push(targetUser._id);
+        targetUser.channel.push(channel._id);
+
+        await targetUser.save();
+        await channel.save();
+
+        return next("Success");
+    } else {
+        return res.status(422).json({errors: {user: "Invalid request"}});
+    }
 });
 
 // delete specific user from channel
-router.delete('/channel/:channelId/:userId', auth.required, function(req, res, next){
-    passport.authenticate('local', {session: false}, function(err, requestUser, info) {
-        if(err){ return next(err); }
+router.delete('/channel/:channelId/:userId', auth.required, async function(req, res, next){
+    var user = req.user;
+    var requestUser = await User.findById(user.id).exec();
     
-        if(requestUser){
-            Promise.all([
-                Channel.findById(req.channelId).exec(),
-                User.findById(req.userId).exec()
-            ]).then(function(results){
-                var channel = results[0];
-                var targetUser = results[1];
-          
-                if (channel.creator.toString() != requestUser._id.toString()){
-                    return res.sendStatus(401);
-                }
+    if(requestUser){
+        var channel = await Channel.findById(req.channelId).exec(),
+        var targetUser = await User.findById(req.userId).exec()
 
-                if(!targetUser){
-                    return res.sendStatus(401);
-                }
-
-                if (channel.members.indexOf(targetUser._id) > -1 || requestUser._id == channel.creator) {
-                    channel.members.splice(channel.members.indexOf(targetUser._id), 1)
-                }
-                if (targetUser.channel.indexOf(channel._id) > -1) {
-                    targetUser.channel.splice(targetUser.channel.indexOf(channel._id), 1)
-                }
-
-                channel.key = this.generateString(12);
-
-                Promise.all([
-                    targetUser.save(),
-                    channel.save()
-                ]).then(function(results){
-                    return next("Success");
-                }).catch(next);
-            }).catch(next);
-
-        } else {
-            return res.status(422).json(info);
+        if (channel.creator.toString() != requestUser._id.toString()){
+            return res.sendStatus(401);
         }
-    })(req, res, next);
+
+        if(!targetUser){
+            return res.sendStatus(401);
+        }
+
+        if (channel.members.indexOf(targetUser._id) > -1 || requestUser._id == channel.creator) {
+            channel.members.splice(channel.members.indexOf(targetUser._id), 1)
+        }
+        if (targetUser.channel.indexOf(channel._id) > -1) {
+            targetUser.channel.splice(targetUser.channel.indexOf(channel._id), 1)
+        }
+
+        channel.key = this.generateString(12);
+
+        await targetUser.save();
+        await channel.save();
+
+        return next("Success");
+
+    } else {
+        return res.status(422).json({errors: {user: "Invalid request"}});
+    }
 });
 
 // delete channel
-router.delete('/channel/:channelId', auth.required, function(req, res, next){
-    passport.authenticate('local', {session: false}, function(err, requestUser, info) {
-        if(err){ return next(err); }
+router.delete('/channel/:channelId', auth.required, async function(req, res, next){
+    var user = req.user;
+    var requestUser = await User.findById(user.id).exec();
     
-        if(requestUser){
-            Channel.findById(req.channelId).then(function(channel){
-                if(requestUser._id != channel.creator){
-                  return res.sendStatus(401);
-                }
+    if(requestUser){
+        var channel = await Channel.findById(req.channelId).exec();
 
-                channel.visible = false;
-                channel.save();
-                return next("Success");
-            }).catch(next);
-        } else {
-            return res.status(422).json(info);
+        if(requestUser._id != channel.creator){
+            return res.sendStatus(401);
         }
-    })(req, res, next);
+
+        channel.visible = false;
+        await channel.save();
+        return next("Success");
+    } else {
+        return res.status(422).json({errors: {user: "Invalid request"}});
+    }
 });
 
 function generateString(length) {

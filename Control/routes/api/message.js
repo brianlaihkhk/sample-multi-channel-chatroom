@@ -10,10 +10,10 @@ router.get('/key/:channelId', auth.required, async function(req, res, next){
     var channel = await Channel.findById(req.channelId).exec();
 
     if(!requestUser || !channel){
-        return res.status(422).json({errors: {user: "Invalid request"}});
+        return res.status(422).json({success: false, errors: {user: "Invalid request"}});
     }
 
-    return res.json({channel: channel.getKey(user.id)});
+    return res.json({success: true, channel: channel.getKey(user.id)});
 });
   
 // Message search
@@ -29,17 +29,17 @@ router.get('/archive/:channelId', auth.required, async function(req, res, next){
     var channel = await Channel.findById(req.channelId).exec();
 
     if(!requestUser || !channel){
-        return res.status(422).json({errors: {user: "Invalid request"}});
+        return res.status(422).json({success: false, errors: {user: "Invalid request"}});
     }
 
     if(requestUser.channel.indexOf(channelId) > -1){
         var key = channel.getKey(requestUser);
 
         Message.find({ 'channel' : channelId, 'createdAt': { '$lt': before} }).start(start).limit(limit).then(function(messageList){
-            return res.json({message: messageList.map(message => message.toJson(key))});
+            return res.json({success: true, message: messageList.map(message => message.toJson(key))});
         });
     } else {
-        return res.status(422).json({errors: {user: "Not belongs to channel"}});
+        return res.status(422).json({success: false, errors: {user: "Not belongs to channel"}});
     }
 
 });

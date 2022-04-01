@@ -10,8 +10,9 @@ var UserSchema = new mongoose.Schema({
   guest: Boolean,
   hash: String,
   salt: String,
+  session: String,
   channel: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Channel' }]
-}, {timestamps: true});
+}, {timestamps: true, collection: 'User' });
 
 UserSchema.plugin(uniqueValidator, {message: 'is already taken.'});
 
@@ -32,7 +33,7 @@ UserSchema.methods.generateJWT = function() {
 
   return jwt.sign({
     id: this._id,
-    username: this.username,
+    session: this.session,
     guest: this.guest,
     exp: parseInt(exp.getTime() / 1000),
   }, secret);

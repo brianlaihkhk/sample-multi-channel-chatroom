@@ -8,7 +8,7 @@ var ChannelSchema = new mongoose.Schema({
   visible : Boolean,
   key : String,
   members : [{ type : mongoose.Schema.Types.ObjectId, ref: 'User' }]
-}, {timestamps: true});
+}, {timestamps: true, collection: 'Channel' });
 
 ChannelSchema.methods.toJson = function(){
   return {

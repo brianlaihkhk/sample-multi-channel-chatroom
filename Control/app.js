@@ -47,7 +47,7 @@ app.use(require('./routes'));
 app.use(function(req, res, next) {
   var err = new Error('Not Found');
   err.status = 404;
-  next(err);
+  next({success: false, error: err});
 });
 
 /// error handlers
@@ -60,7 +60,7 @@ if (!isProduction) {
 
     res.status(err.status || 500);
 
-    res.json({'errors': {
+    res.json({'success': false, 'errors': {
       message: err.message,
       error: err
     }});
@@ -71,7 +71,7 @@ if (!isProduction) {
 // no stacktraces leaked to user
 app.use(function(err, req, res, next) {
   res.status(err.status || 500);
-  res.json({'errors': {
+  res.json({'success': false, 'errors': {
     message: err.message,
     error: {}
   }});

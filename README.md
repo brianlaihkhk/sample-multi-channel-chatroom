@@ -5,10 +5,10 @@ Coding sample - Multi-channel chatroom - Submitted by Brian Lai
 
 - Registered user is able to create / manage / delete their channel
 - Support guest join-in
+- Logout all session supported
 - Old chat data will be persisted, user is able to load pervious conversions when scrolling
 - Secure communication between client and server using channel key
-- Channel key will be refresh when user leave the channel
-- Use message broker instead of CURD operation in controller service for mass scale out capability
+- Message queue design for scale out capability
 - Cloud ready and Docker ready solution
 
 ### Framework 

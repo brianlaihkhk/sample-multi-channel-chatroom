@@ -10,7 +10,7 @@ router.get('/user/:userId', auth.required, async function(req, res, next){
     if(!targetUser){
       return res.sendStatus(401);
     }
-    return res.json({user: targetUser.toJson()});
+    return res.json({success: true, user: targetUser.toJson()});
 
 });
 
@@ -19,9 +19,9 @@ router.get('/user', auth.required, async function(req, res, next){
   var requestUser = await User.findById(user.id).exec();
 
   if (requestUser){
-    return res.json({user: requestUser.toSelfJson()});
+    return res.json({success: true, user: requestUser.toSelfJson()});
   } else {
-    return res.status(422).json({errors: {user: "invalid request"}});
+    return res.status(422).json({success: false, errors: {user: "invalid request"}});
   }
 });
 
@@ -43,27 +43,37 @@ router.put('/user', auth.required, async function(req, res, next){
   }
 
   await requestUser.save();
-  return res.json({user: requestUser.getJwt()});
+  return res.json({success: true, user: requestUser.getJwt()});
 
+});
+
+router.post('/logout', auth.required, async function(req, res, next){
+  var user = req.user;
+  var requestUser = await User.findById(user.id).exec();
+
+  requestUser.session = generateString(12);
+
+  await requestUser.save();
+  return res.json({success: true});
 });
 
 router.post('/login', function(req, res, next){
   if(!req.body.username){
-    return res.status(422).json({errors: {username: "can't be blank"}});
+    return res.status(422).json({success: false, errors: {username: "can't be blank"}});
   }
 
   if(!req.body.password){
-    return res.status(422).json({errors: {password: "can't be blank"}});
+    return res.status(422).json({success: false, errors: {password: "can't be blank"}});
   }
 
   passport.authenticate('local', {session: false}, function(err, user, info){
-    if(err){ return next(err); }
+    if(err){ return next({success: false, error: err}); }
 
     if(user){
       user.token = user.generateJWT();
-      return res.json({user: user.getJwt()});
+      return res.json({success: true, user: user.getJwt()});
     } else {
-      return res.status(422).json(info);
+      return res.status(422).json({success: false, info : info});
     }
   })(req, res, next);
 });
@@ -74,9 +84,10 @@ router.post('/user', function(req, res, next){
   user.username = req.body.username;
   user.guest = false;
   user.setPassword(req.body.password);
+  user.session = generateString(12);
 
   user.save().then(function(){
-    return res.json({user: user.getJwt()});
+    return res.json({success: true, user: user.getJwt()});
   }).catch(next);
 });
 
@@ -86,10 +97,11 @@ router.post('/guest', function(req, res, next){
   user.username = 'guest-' + generateString(6);
   user.guest = true;
   user.setPassword(generateString(12));
+  user.session = generateString(12);
 
   user.save().then(function(){
     user.token = user.generateJWT();
-    return res.json({user: user.getJwt()});
+    return res.json({success: true, user: user.getJwt()});
   }).catch(next);
 });
 

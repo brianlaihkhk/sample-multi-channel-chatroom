@@ -13,7 +13,7 @@ router.get('/channel', function(req, res, next){
     var title = req.query.title;
 
     Channel.find({ 'title' : { '$regex' : '.*' + title + '.*' }, 'private' : private, 'visible' : visible }).start(start).limit(limit).then(function(channelList){
-        return res.json({channels: channelList.map(channel => channel.toJson())});
+        return res.json({success: true, channels: channelList.map(channel => channel.toJson())});
     });
 });
   
@@ -22,7 +22,7 @@ router.get('/channel/:channelId', auth.required, async function(req, res, next){
     var channelId = req.channelId;
 
     var channel = await Channel.findById(channelId).exec();
-    return res.json({channel: channel.getChannel(user.id)});
+    return res.json({success: true, channel: channel.getChannel(user.id)});
 });
 
 // Create channel (Public)
@@ -43,7 +43,7 @@ router.post('/channel', auth.required, async function(req, res, next) {
         requestUser.channel.push(result._id);
 
         await requestUser.save();
-        return next("Success");
+        return next({success: true});
 
     } else {
         return res.sendStatus(401);
@@ -68,9 +68,9 @@ router.post('/channel/:channelId', auth.required, async function(req, res, next)
         await requestUser.save(),
         await channel.save()
 
-        return next("Success");
+        return next({success: true});
     } else {
-        return res.status(422).json({errors: {user: "Invalid request"}});
+        return res.status(422).json({success: false, errors: {user: "Invalid request"}});
     }
 });
 
@@ -96,9 +96,9 @@ router.post('/channel/:channelId/:userId', auth.required, async function(req, re
         await targetUser.save();
         await channel.save();
 
-        return next("Success");
+        return next({success: true});
     } else {
-        return res.status(422).json({errors: {user: "Invalid request"}});
+        return res.status(422).json({success: false, errors: {user: "Invalid request"}});
     }
 });
 
@@ -131,10 +131,10 @@ router.delete('/channel/:channelId/:userId', auth.required, async function(req, 
         await targetUser.save();
         await channel.save();
 
-        return next("Success");
+        return next({success: true});
 
     } else {
-        return res.status(422).json({errors: {user: "Invalid request"}});
+        return res.status(422).json({success: false, errors: {user: "Invalid request"}});
     }
 });
 
@@ -152,9 +152,9 @@ router.delete('/channel/:channelId', auth.required, async function(req, res, nex
 
         channel.visible = false;
         await channel.save();
-        return next("Success");
+        return next({success: true});
     } else {
-        return res.status(422).json({errors: {user: "Invalid request"}});
+        return res.status(422).json({success: false, errors: {user: "Invalid request"}});
     }
 });
 

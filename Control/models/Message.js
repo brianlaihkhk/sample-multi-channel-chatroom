@@ -5,7 +5,7 @@ var MessageSchema = new mongoose.Schema({
   creator: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   message: {type: String, required: [true, "can't be blank"]},
   channel: { type: mongoose.Schema.Types.ObjectId, ref: 'Channel' }
-}, {timestamps: true});
+}, {timestamps: true, collection: 'Message' });
 
 MessageSchema.methods.toJson = function(){
   return {

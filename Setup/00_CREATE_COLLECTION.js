@@ -5,7 +5,7 @@ db.createCollection( "User", {
     validator: {
         $jsonSchema: {
             bsonType: "object",
-            required: [ "username", "guest", "hash", "salt", "channel", "createdAt" ],
+            required: [ "username", "guest", "hash", "salt", "channel", "createdAt", "session" ],
             properties: {
                 username: {
                     bsonType: "string",
@@ -22,6 +22,10 @@ db.createCollection( "User", {
                 salt: {
                     bsonType: "string",
                     description: "Salt of password"
+                },
+                session: {
+                    bsonType: "string",
+                    description: "Login session (Only same session can be access)"
                 },
                 channel: {
                     bsonType: "array",
@@ -43,6 +47,9 @@ db.createCollection( "User", {
         }
 });
 
+db.User.createIndex(
+    { username: 1 } 
+);
 
 db.createCollection( "Channel", {
     validator: {
@@ -95,6 +102,9 @@ db.createCollection( "Channel", {
 });
 
 
+db.Channel.createIndex(
+    { title: 1 } 
+);
 
 db.createCollection( "Message", {
     validator: {
@@ -122,5 +132,9 @@ db.createCollection( "Message", {
         }
         }
 });
+
+db.Message.createIndex(
+    { createdAt: 1 } 
+);
 
 db.getCollectionNames();

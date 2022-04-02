@@ -5,16 +5,16 @@ var User = mongoose.model('User');
 var auth = require('../auth');
 
 // Channel search
-router.get('/channel', function(req, res, next){
+router.get('/channel', auth.required, async function(req, res, next){
     var limit = req.query.limit ? req.query.limit : 20;
     var start = req.query.start ? req.query.start : 0;
     var private = false;
     var visible = false;
     var title = req.query.title;
 
-    Channel.find({ 'title' : { '$regex' : '.*' + title + '.*' }, 'private' : private, 'visible' : visible }).start(start).limit(limit).then(function(channelList){
-        return res.json({success: true, channels: channelList.map(channel => channel.toJson())});
-    });
+    var channelList = await Channel.find({ 'title' : { '$regex' : '.*' + title + '.*' }, 'private' : private, 'visible' : visible }).start(start).limit(limit);
+    
+    return res.json({success: true, channels: channelList.map(channel => channel.toJson())});
 });
   
 router.get('/channel/:channelId', auth.required, async function(req, res, next){
@@ -28,22 +28,25 @@ router.get('/channel/:channelId', auth.required, async function(req, res, next){
 // Create channel (Public)
 router.post('/channel', auth.required, async function(req, res, next) {
     var user = req.user;
-
     var requestUser = await User.findById(user.id).exec();
 
     if(requestUser && !requestUser.guest){
         var channel = new Channel();
+        console.log("requestUser._id " + requestUser._id);
         channel.creator = requestUser._id;
         channel.title = req.body.title;
+        channel.alias = req.body.alias;
         channel.description = req.body.description;
         channel.private = req.body.private;
         channel.visible = true;
+        channel.key = generateString(12);
+        channel.members = [];
 
         await channel.save()
-        requestUser.channel.push(result._id);
+        requestUser.channel.concat([channel._id]);
 
         await requestUser.save();
-        return next({success: true});
+        return res.json({success: true, key: channel.getKey(user.id)});
 
     } else {
         return res.sendStatus(401);
@@ -51,24 +54,58 @@ router.post('/channel', auth.required, async function(req, res, next) {
 
 });
 
+
+router.put('/channel/:channelId', auth.required, async function(req, res, next){
+    var channelId = req.channelId;
+    var channel = await Channel.findById(channelId).exec();
+  
+    if(channel){
+
+        if (!channel.isCreator(req.user.id)){
+            return res.sendStatus(401);
+        }
+
+        // only update fields that were actually passed...
+        if(typeof req.body.title !== 'undefined'){
+            channel.title = req.body.title;
+        }
+
+        if(typeof req.body.description !== 'undefined'){
+            channel.description = req.body.description;
+        }
+
+        if(typeof req.body.private !== 'undefined'){
+            channel.private = boolean(req.body.private);
+        }
+    
+        await channel.save();
+        return res.json({success: true});
+
+    } else {
+        return res.status(422).json({success: false, errors: {user: "Invalid request"}});
+    }
+  });
+
 // Join channel (Public)
 router.post('/channel/:channelId', auth.required, async function(req, res, next){
     var user = req.user;
     var requestUser = await User.findById(user.id).exec();
-    
-    if(requestUser){
-        var channel = await Channel.findById(req.channelId).exec();
+    var channel = await Channel.findById(req.channelId).exec();
+
+    if(channel && requestUser){
+
         if(!channel.private){
             return res.sendStatus(401);
         }
 
-        channel.members.push(requestUser._id);
-        requestUser.channel.push(channel._id);
+        channel.members.concat([requestUser._id]);
+        requestUser.channel.concat([channel._id]);
 
         await requestUser.save(),
         await channel.save()
 
-        return next({success: true});
+        return res.json({success: true, key: channel.getKey(user.id)});
+
     } else {
         return res.status(422).json({success: false, errors: {user: "Invalid request"}});
     }
@@ -76,62 +113,60 @@ router.post('/channel/:channelId', auth.required, async function(req, res, next)
 
 // Add specific user to channel
 router.post('/channel/:channelId/:userId', auth.required, async function(req, res, next){
-    var user = req.user;
-    var requestUser = await User.findById(user.id).exec();
-
-    if(requestUser){
-        var channel = await Channel.findById(req.channelId).exec();
-        var targetUser = await User.findById(req.userId).exec();
+    var channel = await Channel.findById(req.channelId).exec();
+    var targetUser = await User.findById(req.userId).exec();
     
-        if (channel.private && channel.creator.toString() != requestUser._id.toString()){
-            return res.sendStatus(401);
-        }
-        if(!targetUser){
-            return res.sendStatus(401);
-        }
-
-        channel.members.push(targetUser._id);
-        targetUser.channel.push(channel._id);
-
-        await targetUser.save();
-        await channel.save();
-
-        return next({success: true});
-    } else {
+    if(!targetUser || !channel){
         return res.status(422).json({success: false, errors: {user: "Invalid request"}});
     }
+
+    if (channel.private && !channel.isCreator(req.user.id)){
+        return res.sendStatus(401);
+    }
+
+    if (channel.isCreator(targetUser._id)){
+        return res.status(422).json({success: false, errors: {user: "Invalid request"}});
+    }
+
+    channel.members.concat([targetUser._id]);
+    targetUser.channel.concat([channel._id]);
+
+    await targetUser.save();
+    await channel.save();
+
+    return res.json({success: true});
+
+
 });
 
 // delete specific user from channel
 router.delete('/channel/:channelId/:userId', auth.required, async function(req, res, next){
-    var user = req.user;
-    var requestUser = await User.findById(user.id).exec();
-    
-    if(requestUser){
-        var channel = await Channel.findById(req.channelId).exec(),
-        var targetUser = await User.findById(req.userId).exec()
+    var channel = await Channel.findById(req.channelId).exec();
+    var targetUser = await User.findById(req.userId).exec();
 
-        if (channel.creator.toString() != requestUser._id.toString()){
+    if (channel && targetUser){
+
+        if (!channel.isCreator(req.user.id) && !channel.isMember(req.user.id) && !channel.isMember(targetUser._id)){
             return res.sendStatus(401);
         }
 
         if(!targetUser){
+            return res.status(422).json({success: false, errors: {user: "Invalid request"}});
+        }
+
+        if (channel.isMember(req.user.id) && req.user.id != targetUser._id){
             return res.sendStatus(401);
         }
 
-        if (channel.members.indexOf(targetUser._id) > -1 || requestUser._id == channel.creator) {
-            channel.members.splice(channel.members.indexOf(targetUser._id), 1)
-        }
-        if (targetUser.channel.indexOf(channel._id) > -1) {
-            targetUser.channel.splice(targetUser.channel.indexOf(channel._id), 1)
-        }
+        channel.members.splice(channel.members.indexOf(targetUser._id), 1)
+        targetUser.channel.splice(targetUser.channel.indexOf(channel._id), 1)
 
-        channel.key = this.generateString(12);
+        channel.key = generateString(12);
 
         await targetUser.save();
         await channel.save();
 
-        return next({success: true});
+        return res.json({success: true});
 
     } else {
         return res.status(422).json({success: false, errors: {user: "Invalid request"}});
@@ -140,19 +175,16 @@ router.delete('/channel/:channelId/:userId', auth.required, async function(req, 
 
 // delete channel
 router.delete('/channel/:channelId', auth.required, async function(req, res, next){
-    var user = req.user;
-    var requestUser = await User.findById(user.id).exec();
-    
-    if(requestUser){
-        var channel = await Channel.findById(req.channelId).exec();
+    var channel = await Channel.findById(req.channelId).exec();
 
-        if(requestUser._id != channel.creator){
+    if(channel){
+        if(!channel.isCreator(req.user.id)){
             return res.sendStatus(401);
         }
 
         channel.visible = false;
         await channel.save();
-        return next({success: true});
+        return res.json({success: true});
     } else {
         return res.status(422).json({success: false, errors: {user: "Invalid request"}});
     }

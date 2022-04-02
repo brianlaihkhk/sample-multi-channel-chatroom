@@ -32,7 +32,9 @@ if (!isProduction) {
 if(isProduction){
   mongoose.connect(process.env.MONGODB_URI);
 } else {
-  mongoose.connect('mongodb://control:MusicRocks+@localhost:27017/Chat');
+  var username = 'control';
+  var password = 'MusicRocks+';
+  mongoose.connect('mongodb://' + username + ':' + password + '@localhost:27017/Chat');
   mongoose.set('debug', true);
 }
 

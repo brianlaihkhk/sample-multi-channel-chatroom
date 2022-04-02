@@ -3,6 +3,7 @@ var mongoose = require('mongoose');
 var ChannelSchema = new mongoose.Schema({
   creator: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   title: {type: String, required: [true, "can't be blank"], index: true},
+  alias: {type: String, unique: true, required: [true, "can't be blank"], index: true},
   description: String,
   private : Boolean,
   visible : Boolean,
@@ -13,6 +14,7 @@ var ChannelSchema = new mongoose.Schema({
 ChannelSchema.methods.toJson = function(){
   return {
     id: this._id,
+    alias: this.alias,
     title: this.title,
     description: this.description,
     private: this.private

@@ -14,7 +14,7 @@ Coding sample - Multi-channel chatroom - Submitted by Brian Lai
 ### Framework 
 
 - [Client]
-    - angularJs
+    - angular
 
 - [Control (Handle user registeration, guest / user login, and archive message retrieve)]
     - nodeJs
@@ -46,24 +46,24 @@ Coding sample - Multi-channel chatroom - Submitted by Brian Lai
 
 - [AWS solution]
     - (Registration) Client <-> Control
-    - (Send message) Client <-> Control <-> AWS Kinesis / AWS MSK / Apache Kafka
-    - (Receive message) AWS Kinesis / AWS MSK / Apache Kafka <-> **AWS ApiGateway** <-> Client
-    - (Store archive) AWS Kinesis / AWS MSK / Apache Kafka <-> Message <-> MongoDB
+    - (Send message) Client <-> Control <-> Amq / RabbitMq
+    - (Receive message) Amq / RabbitMq <-> **AWS ApiGateway** <-> Client
+    - (Store archive) Amq / RabbitMq <-> Message <-> MongoDB
     - (Load archive) Client <-> Control <-> MongoDB
 
 - [non-AWS solution]
     - (Registration) Client <-> Control
-    - (Send message) Client <-> Control <-> Apache Kafka
-    - (Receive message) Apache Kafka <-> **Chat** <-> Client
-    - (Store archive) Apache Kafka <-> Message <-> MongoDB
+    - (Send message) Client <-> Control <-> RabbitMq
+    - (Receive message) RabbitMq <-> **Chat** <-> Client
+    - (Store archive) RabbitMq <-> Message <-> MongoDB
     - (Load archive) Client <-> Control <-> MongoDB
 
 ### Folder
 
 - Client : Frontend-UI
-- Control : Handler for client request (Registration / Login / Channel management / Send message to Kafka / Kinesis)
-- Chat : Require if using Kafka. Broadcast message to client using websocket
-- Message : Store message from Kinesis or Kafka to MongoDB
+- Control : Handler for client request (Registration / Login / Channel management / Send message to Amq / RabbitMq)
+- Chat : Receive and broadcast message to client using websocket and Amq / RabbitMq
+- Message : Store message from Amq / RabbitMq to MongoDB as archive
 - Deploy : Deployment script
 - Tools : Tools for encryption, encoding and local server script for testing
 - Setup : Setup script for database initialization
@@ -82,7 +82,7 @@ Coding sample - Multi-channel chatroom - Submitted by Brian Lai
     - AWS-cli
     - AWS IAM setup with AWS Lambda deployment capability
     - AWS VPC setup that AWS Lambda is able to connect to public and to MongoDB 
-    - AWS Kinesis / AWS MSK / Apache Kafka server
+    - Amq / RabbitMq server
     - AWS ApiGateway
     - AWS ECS / EKS / Kubernetes
     - nodejs

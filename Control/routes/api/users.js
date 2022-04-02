@@ -85,6 +85,7 @@ router.post('/user', function(req, res, next){
   user.guest = false;
   user.setPassword(req.body.password);
   user.session = generateString(12);
+  user.channel = [];
 
   user.save().then(function(){
     return res.json({success: true, user: user.getJwt()});
@@ -98,6 +99,7 @@ router.post('/guest', function(req, res, next){
   user.guest = true;
   user.setPassword(generateString(12));
   user.session = generateString(12);
+  user.channel = [];
 
   user.save().then(function(){
     user.token = user.generateJWT();

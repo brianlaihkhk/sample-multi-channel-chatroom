@@ -34,7 +34,7 @@ db.createCollection( "User", {
                     uniqueItems: true,
                     additionalProperties: false,
                     items: {
-                        bsonType: "string",
+                        bsonType: "objectId",
                         description: "Channel Ids"
                     }
                 },
@@ -48,18 +48,22 @@ db.createCollection( "User", {
 });
 
 db.User.createIndex(
-    { username: 1 } 
+    { username: 1 }, { unique: true } 
 );
 
 db.createCollection( "Channel", {
     validator: {
         $jsonSchema: {
             bsonType: "object",
-            required: [ "creator", "title", "description", "private", "visible", "key", "members", "createdAt" ],
+            required: [ "creator", "alias", "title", "description", "private", "visible", "key", "members", "createdAt" ],
             properties: {
                 creator: {
-                    bsonType: "string",
+                    bsonType: "objectId",
                     description: "creator id"
+                },
+                alias: {
+                    bsonType: "string",
+                    description: "Channel alias"
                 },
                 title: {
                     bsonType: "string",
@@ -88,7 +92,7 @@ db.createCollection( "Channel", {
                     uniqueItems: true,
                     additionalProperties: false,
                     items: {
-                        bsonType: "string",
+                        bsonType: "objectId",
                         description: "Member Ids"
                     }
                 },
@@ -98,13 +102,17 @@ db.createCollection( "Channel", {
                 }
             }
         }
-        }
+    }
 });
 
 
 db.Channel.createIndex(
     { title: 1 } 
 );
+db.Channel.createIndex(
+    { alias: 1 }, { unique: true }
+);
+
 
 db.createCollection( "Message", {
     validator: {
@@ -113,7 +121,7 @@ db.createCollection( "Message", {
             required: [ "creator", "message", "channel", "createdAt" ],
             properties: {
                 creator: {
-                    bsonType: "string",
+                    bsonType: "objectId",
                     description: "creator id"
                 },
                 message: {

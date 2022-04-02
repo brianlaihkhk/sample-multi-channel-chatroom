@@ -67,4 +67,8 @@ UserSchema.methods.toProfileJSONFor = function(){
   };
 };
 
+UserSchema.methods.isInChannel = function(channelId){
+  return (this.channel.indexOf(channelId) > -1) ? true : false;
+};
+
 mongoose.model('User', UserSchema);

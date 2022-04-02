@@ -8,6 +8,7 @@ function getTokenFromHeader(req){
       req.headers.authorization && req.headers.authorization.split(' ')[0] === 'Bearer') {
     return req.headers.authorization.split(' ')[1];
   }
+
   return null;
 }
 
@@ -15,7 +16,7 @@ function getTokenFromHeader(req){
 var isRevokedCallback = async function(req, payload, done){
 
   var requestUser = await User.findById(payload.id).exec();
-  console.log(requestUser);
+
   if (requestUser.session == payload.session) {
      return done(null, false);
   }

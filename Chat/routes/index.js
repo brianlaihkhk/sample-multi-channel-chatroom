@@ -3,9 +3,23 @@ var router = require('express').Router(),
     CryptoJS = require("crypto-js");
 
 var storeQueue = 'store';
+var conn = null;
+
+async function connect() {
+    var isProduction = process.env.NODE_ENV === 'production';
+
+    if(isProduction){
+        conn = await amqp.connect(process.env.AQMP_URI);
+    } else {
+        var username = 'chat';
+        var password = encodeURIComponent('MusicRocks+');
+        conn = await amqp.connect('amqp://' + username + ':' + password + '@localhost:5672');
+    }
+
+}
 
 router.ws('/chat/:channelId/:userId', async (ws, req) => {
-    var conn = await amqp.connect('amqp://localhost');
+    if (!conn) { await this.connect(); }
 
     var topic = 'topic.' + req.channelId;
     var queue = 'chat.' + req.channelId + '.' + this.generateString(12);
@@ -15,34 +29,29 @@ router.ws('/chat/:channelId/:userId', async (ws, req) => {
     this.createQueue(topic, queue);
 
     // listener for kafka/kinesis
-    conn.createChannel(function(error1, channel) {
-        if (error1) {
-          throw error1;
-        }
+    var channel = await conn.createChannel();
 
-        channel.consume(queueName, function(message){
-            try {
-                // check message is able to decode
-                CryptoJS.AES.decrypt(message, key);
+    channel.consume(queueName, function(message){
+        try {
+            // check message is able to decode
+            CryptoJS.AES.decrypt(message, key);
 
-                var response = {
-                    createdAt : message.createdAt,
-                    creator : message.creator,
-                    message : message.message,
-                    type : message.type
-                }
-
-                ws.send(response);
-                channel.ack(message);
-            } catch (e) {
-                console.log(e);
-                channel.reject(message);
-                console.log('Message reset, update encrypt key and reconnect again');
-                ws.close();
+            var response = {
+                createdAt : message.createdAt,
+                creator : message.creator,
+                message : message.message,
+                type : message.type
             }
-        }, { noAck: false });
 
-    });
+            ws.send(response);
+            channel.ack(message);
+        } catch (e) {
+            console.log(e);
+            channel.reject(message);
+            console.log('Message reset, update encrypt key and reconnect again');
+            ws.close();
+        }
+    }, { noAck: false });
 
     ws.on('message', msg => {
         try {
@@ -73,74 +82,54 @@ router.ws('/chat/:channelId/:userId', async (ws, req) => {
     });
 })
 
-function deleteQueue (queueName) {
-    conn.createChannel(function(error1, channel) {
-        if (error1) {
-          throw error1;
-        }
+async function deleteQueue (queueName) {
+    var channel = await conn.createChannel();
 
-        channel.deleteQueue(queueName, function(err, ok){
-            if (err) {
-                return false;
-            }
-            return true;
-        });
+    channel.deleteQueue(queueName).then(function (ok){
+        return true;
+    }).catch(function (err){ return false; });
 
-        channel.close();
-    });
+    channel.close();
 
 }
 
-function sendMessage (topicName, message) {
-    conn.createChannel(function(error1, channel) {
-        if (error1) {
-          throw error1;
-        }
-        channel.publish(topicName, '', message);
-        channel.close();
-    });
+async function sendMessage (topicName, message) {
+    if (!conn) { await this.connect(); }
+    
+    var channel = await conn.createChannel();
+
+    channel.publish(topicName, '', message);
+    channel.close();
 }
 
-function createTopic (topicName) {
-    conn.createChannel(function(err, channel) {
-        if (err) {
-          throw err;
-        }
+async function createTopic (topicName) {
+    if (!conn) { await this.connect(); }
+
+    var channel = await conn.createChannel();
+
       
-        channel.assertExchange(topicName, 'fanout', {
-           durable: false
-        });
-
-        channel.close();
+    channel.assertExchange(topicName, 'fanout', {
+        durable: false
     });
+
+    channel.close();
+
 }
 
-function createQueue (topicName, queueName) {
-    conn.createChannel(function(err, channel) {
-        if (err) {
-          throw err;
-        }
-      
-        channel.assertQueue(queueName, function(err, ok) {
-            if (err) {
-              throw err;
-            }
-            channel.bindQueue(queueName, topicName, "", function(err, ok) {
-                if (err) {
-                  throw err;
-                }
-            });
-        }, {'messageTtl' : 60000, 'expires' : 86400000 });
+async function createQueue (topicName, queueName) {
+    if (!conn) { await this.connect(); }
 
-        channel.assertQueue(storeQueue, function(err, ok) {
-            if (err) {
-              throw err;
-            }
-            channel.bindQueue(storeQueue, topicName, "");
-        });
+    var channel = await conn.createChannel();
 
-        channel.close();
+    channel.assertQueue(queueName, {'messageTtl' : 60000, 'expires' : 86400000 }).then(function(ok) {
+        channel.bindQueue(queueName, topicName, "");
     });
+
+    channel.assertQueue(storeQueue).then(function(ok) {
+        channel.bindQueue(storeQueue, topicName, "");
+    });
+
+    channel.close();
 }
 
 function refreshKey (channelId) {

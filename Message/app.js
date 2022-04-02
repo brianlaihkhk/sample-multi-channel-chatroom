@@ -1,19 +1,19 @@
-var http = require('http'),
-    handle = require('./handle'),
-    mongoose = require('mongoose');
+var mongoose = require('mongoose');
 
-if (!isProduction) {
-  app.use(errorhandler());
-}
+var isProduction = process.env.NODE_ENV === 'production';
 
 if(isProduction){
   mongoose.connect(process.env.MONGODB_URI);
 } else {
-  mongoose.connect('mongodb://message:MangoJuice%@localhost:27017/Chat');
+  var username = 'message';
+  var password = 'MangoJuice%';
+  mongoose.connect('mongodb://' + username + ':' + password + '@localhost:27017/Chat');
   mongoose.set('debug', true);
 }
 
-http.createServer(function (req, res) {
-  handle.saveQueueMessage();
-  setInterval(handle.sendHeartbeatMessage, 30000);
-}).listen(8080);
+require('./models/Message');
+require('./models/Channel');
+var handle = require('./handle');
+
+handle.saveQueueMessage();
+setInterval(handle.sendHeartbeatMessage, 30000);

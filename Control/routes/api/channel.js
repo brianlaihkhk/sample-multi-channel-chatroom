@@ -12,7 +12,7 @@ router.get('/channel', auth.required, async function(req, res, next){
     var visible = false;
     var title = req.query.title;
 
-    var channelList = await Channel.find({ 'title' : { '$regex' : '.*' + title + '.*' }, 'private' : private, 'visible' : visible }).start(start).limit(limit);
+    var channelList = await Channel.find({ 'title' : { '$regex' : '.*' + title + '.*' }, 'private' : private, 'visible' : visible }).skip(start).limit(limit).exec();
     
     return res.json({success: true, channels: channelList.map(channel => channel.toJson())});
 });
@@ -42,11 +42,11 @@ router.post('/channel', auth.required, async function(req, res, next) {
         channel.key = generateString(12);
         channel.members = [];
 
-        await channel.save()
-        requestUser.channel.concat([channel._id]);
+        await channel.save();
+        requestUser.channel = requestUser.channel.concat([channel._id]);
 
         await requestUser.save();
-        return res.json({success: true, key: channel.getKey(user.id)});
+        return res.json({success: true, channel: channel.toJson(), key: channel.getKey(user.id) });
 
     } else {
         return res.sendStatus(401);
@@ -98,8 +98,8 @@ router.post('/channel/:channelId', auth.required, async function(req, res, next)
             return res.sendStatus(401);
         }
 
-        channel.members.concat([requestUser._id]);
-        requestUser.channel.concat([channel._id]);
+        channel.members = channel.members.concat([requestUser._id]);
+        requestUser.channel = requestUser.channel.concat([channel._id]);
 
         await requestUser.save(),
         await channel.save()
@@ -128,8 +128,8 @@ router.post('/channel/:channelId/:userId', auth.required, async function(req, re
         return res.status(422).json({success: false, errors: {user: "Invalid request"}});
     }
 
-    channel.members.concat([targetUser._id]);
-    targetUser.channel.concat([channel._id]);
+    channel.members = channel.members.concat([targetUser._id]);
+    targetUser.channel = targetUser.channel.concat([channel._id]);
 
     await targetUser.save();
     await channel.save();
@@ -160,6 +160,8 @@ router.delete('/channel/:channelId/:userId', auth.required, async function(req, 
 
         channel.members.splice(channel.members.indexOf(targetUser._id), 1)
         targetUser.channel.splice(targetUser.channel.indexOf(channel._id), 1)
+        channel.markModified('members');
+        targetUser.markModified('channel');
 
         channel.key = generateString(12);
 

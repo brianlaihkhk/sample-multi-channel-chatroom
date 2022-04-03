@@ -18,7 +18,7 @@ async function connect() {
 
 }
 
-router.ws('/chat/:channelId/:userId', async (ws, req) => {
+router.ws('/chat/:channelId', async (ws, req) => {
     if (!conn) { await this.connect(); }
 
     var topic = 'topic.' + req.channelId;
@@ -31,32 +31,43 @@ router.ws('/chat/:channelId/:userId', async (ws, req) => {
     // listener for kafka/kinesis
     var channel = await conn.createChannel();
 
-    channel.consume(queueName, function(message){
+    channel.consume(queueName, async function(msg){
         try {
+            var queueMessage = JSON.parse(msg.content);
             // check message is able to decode
-            CryptoJS.AES.decrypt(message, key);
+            CryptoJS.AES.decrypt(queueMessage.message, queueMessage.key);
 
             var response = {
-                createdAt : message.createdAt,
-                creator : message.creator,
-                message : message.message,
-                type : message.type
+                createdAt : queueMessage.createdAt,
+                creator : queueMessage.creator,
+                message : queueMessage.message,
+                type : queueMessage.type
             }
 
             ws.send(response);
-            channel.ack(message);
+            await channel.ack(msg);
+
+            if (key != queueMessage.key){
+                console.log('Message reset, update encrypt key and reconnect again');
+                ws.close();
+            }
         } catch (e) {
             console.log(e);
-            channel.reject(message);
+            await channel.reject(msg);
             console.log('Message reset, update encrypt key and reconnect again');
             ws.close();
         }
     }, { noAck: false });
 
-    ws.on('message', msg => {
+    ws.on('message', receiveMessage => {
         try {
+            if (key != receiveMessage.key){
+                console.log('Message reset, update encrypt key and reconnect again');
+                ws.close();
+            }
+
             // check message is able to decode
-            CryptoJS.AES.decrypt(message, key);
+            CryptoJS.AES.decrypt(receiveMessage.message, receiveMessage.key);
 
             // Send message to kafka / Kinesis
             var message = { 
@@ -85,30 +96,26 @@ router.ws('/chat/:channelId/:userId', async (ws, req) => {
 async function deleteQueue (queueName) {
     var channel = await conn.createChannel();
 
-    channel.deleteQueue(queueName).then(function (ok){
-        return true;
-    }).catch(function (err){ return false; });
-
+    await channel.deleteQueue(queueName);
     channel.close();
+
+    return true;
 
 }
 
 async function sendMessage (topicName, message) {
     if (!conn) { await this.connect(); }
-    
     var channel = await conn.createChannel();
 
-    channel.publish(topicName, '', message);
+    await channel.publish(topicName, '', Buffer.from(JSON.stringify(message)));
     channel.close();
 }
 
 async function createTopic (topicName) {
     if (!conn) { await this.connect(); }
-
     var channel = await conn.createChannel();
 
-      
-    channel.assertExchange(topicName, 'fanout', {
+    await channel.assertExchange(topicName, 'fanout', {
         durable: false
     });
 
@@ -118,27 +125,20 @@ async function createTopic (topicName) {
 
 async function createQueue (topicName, queueName) {
     if (!conn) { await this.connect(); }
-
     var channel = await conn.createChannel();
 
-    channel.assertQueue(queueName, {'messageTtl' : 60000, 'expires' : 86400000 }).then(function(ok) {
-        channel.bindQueue(queueName, topicName, "");
-    });
+    await channel.assertQueue(queueName, {'messageTtl' : 60000, 'expires' : 86400000 });
+    await channel.bindQueue(queueName, topicName, "");
 
-    channel.assertQueue(storeQueue).then(function(ok) {
-        channel.bindQueue(storeQueue, topicName, "");
-    });
+    await channel.assertQueue(storeQueue);
+    await channel.bindQueue(storeQueue, topicName, "");
 
     channel.close();
 }
 
-function refreshKey (channelId) {
-    Channel.findById(channelId).then(function(channel){
-        if(err){ 
-            return null;
-        }
-        return channel.key;
-    });
+async function refreshKey (channelId) {
+    var channel = await Channel.findById(channelId);
+    return channel.key;
 }
 
 function generateString(length) {

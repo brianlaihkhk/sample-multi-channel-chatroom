@@ -3,6 +3,7 @@ var mongoose = require('mongoose');
 var ChannelSchema = new mongoose.Schema({
   creator: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   title: {type: String, required: [true, "can't be blank"], index: true},
+  alias: {type: String, unique: true, required: [true, "can't be blank"], index: true},
   description: String,
   private : Boolean,
   visible : Boolean,
@@ -10,9 +11,10 @@ var ChannelSchema = new mongoose.Schema({
   members : [{ type : mongoose.Schema.Types.ObjectId, ref: 'User' }]
 }, {timestamps: true, collection: 'Channel' });
 
-ChannelSchema.methods.toJson = function(user){
+ChannelSchema.methods.toJson = function(){
   return {
     id: this._id,
+    alias: this.alias,
     title: this.title,
     description: this.description,
     private: this.private
@@ -20,29 +22,29 @@ ChannelSchema.methods.toJson = function(user){
 };
 
 
-ChannelSchema.methods.getChannel = function(user){
-    response = this.toJson(user);
-    if ((!this.private || this.isCreator(user) || this.isMember(user)) && this.visible ){
-      response.creator = this.creator.toJson(),
-      response.members = this.members.map( user => user.toJson());
+ChannelSchema.methods.getChannel = function(userId){
+    response = this.toJson();
+    if ((!this.private || this.isCreator(userId) || this.isMember(userId)) && this.visible ){
+      response.creator = this.creator,
+      response.members = this.members;
     }
     return response;
 };
 
-ChannelSchema.methods.getKey = function(user){
+ChannelSchema.methods.getKey = function(userId){
     response = {}
-    if ((!this.private || this.isCreator(user) || this.isMember(user)) && this.visible ){
+    if ((!this.private || this.isCreator(userId) || this.isMember(userId)) && this.visible ){
       response.key = this.key
     }
     return response;
 };
 
-ChannelSchema.methods.isCreator = function(user){
-    return (user._id == this.creator._id) ? true : false;
+ChannelSchema.methods.isCreator = function(userId){
+    return (userId == this.creator._id) ? true : false;
 };
 
-ChannelSchema.methods.isMember = function(user){
-    return (this.members.indexOf(user._id) > -1) ? true : false;
+ChannelSchema.methods.isMember = function(userId){
+    return (this.members.indexOf(userId) > -1) ? true : false;
 };
 
 mongoose.model('Channel', ChannelSchema);

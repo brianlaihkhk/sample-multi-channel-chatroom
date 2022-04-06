@@ -36,7 +36,7 @@ router.get('/archive/:channelId', auth.required, async function(req, res, next){
         var key = channel.getKey(requestUser);
 
         Message.find({ 'channel' : channelId, 'createdAt': { '$lt': before} }).start(start).limit(limit).then(function(messageList){
-            return res.json({success: true, message: messageList.map(message => message.toJson(key))});
+            return res.json({success: true, messages: messageList.map(message => message.toJson(key))});
         });
     } else {
         return res.status(422).json({success: false, errors: {user: "Not belongs to channel"}});

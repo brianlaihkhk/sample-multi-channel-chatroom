@@ -104,7 +104,6 @@ Coding sample - Multi-channel chatroom - Submitted by Brian Lai
 
 | Endpoint        | Request type           |
 | ------------- | ----- |
-| /register  | POST |
 | /login     |   POST |
 | /guest      |  POST |
 | /user      |  GET, POST, PUT |

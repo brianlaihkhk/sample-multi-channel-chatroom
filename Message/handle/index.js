@@ -8,7 +8,7 @@ var storeQueue = 'store';
 var conn = null;
 
 module.exports = {
-    connect : async function () {
+    connect : async () => {
         var isProduction = process.env.NODE_ENV === 'production';
 
         if(isProduction){
@@ -21,7 +21,7 @@ module.exports = {
 
     },
 
-    saveQueueMessage : async function () {
+    saveQueueMessage : async () => {
         if (!conn) { await this.connect(); }
         var channel = await conn.createChannel();
 
@@ -31,14 +31,15 @@ module.exports = {
             var queueMessage = JSON.parse(msg.content);
 
             try {
-                var message = new Message();
                 var decryptedMessage = CryptoJS.AES.decrypt(queueMessage.message, queueMessage.key);
 
-                message.createdAt = queueMessage.createdAt;
-                message.creator = queueMessage.creator;
-                message.channel = queueMessage.channel;
-                message.message = decryptedMessage.toString(CryptoJS.enc.Utf8);
                 if (queueMessage.type != 'heartbeat'){
+                    var message = new Message();
+
+                    message.createdAt = queueMessage.createdAt;
+                    message.creator = queueMessage.creator;
+                    message.channel = queueMessage.channel;
+                    message.message = decryptedMessage.toString(CryptoJS.enc.Utf8);
                     await message.save();
                 }
 
@@ -46,41 +47,46 @@ module.exports = {
 
                 await channel.ack(msg);
             } catch (e) {
-                await channel.reject(msg);
+                await channel.reject(msg, {requeue : false});
                 console.log(e);
             }
         }, { noAck: false });
 
     },
 
-    sendHeartbeatMessage : async function  () {
+    sendHeartbeatMessage : async () => {
         if (!conn) { await this.connect(); }
 
         var mqChannel = await conn.createChannel();
 
-        for await (const channel of Channel.find({}).cursor({batchSize:50})){
-            var topic = 'topic.' + channel._id;
-            var message = {
-                type : 'heartbeat',
-                message : CryptoJS.AES.encrypt("heartbeat", channel.key).toString(),
-                channel : channel._id,
-                creator : 'system',
-                createdAt : new Date(),
-                key : channel.key
+        try {
+            for await (const channel of Channel.find({}).cursor({ batchSize: 50 })){
+                var topic = 'topic.' + channel._id;
+                var message = {
+                    type : 'heartbeat',
+                    message : CryptoJS.AES.encrypt("heartbeat", channel.key).toString(),
+                    channel : channel._id,
+                    creator : 'system',
+                    createdAt : new Date(),
+                    key : channel.key
+                }
+
+                console.log('[' + topic + '] processing');
+                
+                await mqChannel.assertExchange(topic, 'fanout', {
+                    durable: false
+                })
+                
+                await mqChannel.bindQueue(storeQueue, topic, "");
+                await mqChannel.publish(topic, '', Buffer.from(JSON.stringify(message)));
+
+                console.log('[' + topic + '] Sent');
             }
 
-            console.log('[' + topic + '] processing');
-            
-            await mqChannel.assertExchange(topic, 'fanout', {
-                durable: false
-            })
-            
-            await mqChannel.bindQueue(storeQueue, topic, "");
-            await mqChannel.publish(topic, '', Buffer.from(JSON.stringify(message)));
-
-            console.log('[' + topic + '] Sent');
+            mqChannel.close();
+        } catch (e) {
+            mqChannel.close();
+            console.log(e);
         }
-
-        mqChannel.close();
     }
 }

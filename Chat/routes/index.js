@@ -31,7 +31,7 @@ router.ws('/chat/:channelId', async (ws, req) => {
     // listener for kafka/kinesis
     var channel = await conn.createChannel();
 
-    channel.consume(queueName, async function(msg){
+    channel.consume(queueName, async (msg) => {
         try {
             var queueMessage = JSON.parse(msg.content);
             // check message is able to decode
@@ -59,7 +59,7 @@ router.ws('/chat/:channelId', async (ws, req) => {
         }
     }, { noAck: false });
 
-    ws.on('message', receiveMessage => {
+    ws.on('message', async (receiveMessage) => {
         try {
             if (key != receiveMessage.key){
                 console.log('Message reset, update encrypt key and reconnect again');
@@ -79,7 +79,7 @@ router.ws('/chat/:channelId', async (ws, req) => {
                 key : key
             };
 
-            this.sendMessage(topic, message);
+            await this.sendMessage(topic, message);
         } catch (e) {
             console.log(e);
             console.log('Message is unable process, update encrypt key and reconnect again');
@@ -87,8 +87,8 @@ router.ws('/chat/:channelId', async (ws, req) => {
         }
     });
 
-    ws.on('close', () => {
-        this.deleteQueue(queue);
+    ws.on('close', async () => {
+        await this.deleteQueue(queue);
         console.log('WebSocket was closed');
     });
 })

@@ -1,0 +1,28 @@
+/* You can add global styles to this file, and also import other style files */
+@import url('https://fonts.googleapis.com/css?family=Poppins');
+
+html, body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  color: #292929;
+  font: 90% Roboto, Arial, sans-serif;
+  font-weight: 300;
+}
+
+p {
+  padding: 0 10px;
+  line-height: 1.8;
+}
+
+ul li {
+  padding-right: 10px;
+  line-height: 1.6;
+}
+
+h3 {
+  padding: 5px 20px;
+  margin: 0;
+}

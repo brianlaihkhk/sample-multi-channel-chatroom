@@ -4,28 +4,20 @@ import { HttpHeaders, HttpClient, HttpParams } from '@angular/common/http';
 import { Observable ,  throwError } from 'rxjs';
 import { Response } from '../models'
 
-import { JwtService } from './jwt.service';
 import { catchError, map } from 'rxjs/operators';
 
 @Injectable()
 export class ApiService {
   constructor(
     private http: HttpClient,
-    private headers: HttpHeaders,
-    private jwtService: JwtService
+    private headers: HttpHeaders
   ) {}
 
   private formatErrors(error: any) {
     return  throwError(error.error);
   }
 
-  private setHeader() {
-    this.headers.set({'Authorization' : 'Bearer ' + this.jwtService.getToken()});
-  }
-
   get(path: string, params: HttpParams = new HttpParams()): Observable<any> {
-    this.setHeader();
-
     return this.http.get(`${environment.api_url}${path}`, { params : params, headers: this.headers })
       .pipe(map( (data:Response) => {
                   if (!data.success) {
@@ -37,8 +29,6 @@ export class ApiService {
   }
 
   put(path: string, body: Object = {}): Observable<any> {
-    this.setHeader();
-
     return this.http.put(
       `${environment.api_url}${path}`,
       JSON.stringify(body),
@@ -53,8 +43,6 @@ export class ApiService {
   }
 
   post(path: string, body: Object = {}): Observable<any> {
-    this.setHeader();
-
     return this.http.post(
       `${environment.api_url}${path}`,
       JSON.stringify(body),
@@ -68,8 +56,6 @@ export class ApiService {
   }
 
   delete(path): Observable<any> {
-    this.setHeader();
-
     return this.http.delete(
       `${environment.api_url}${path}`,
       { headers: this.headers }

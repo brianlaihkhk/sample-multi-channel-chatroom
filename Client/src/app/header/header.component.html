@@ -1,0 +1,63 @@
+<nav class="navbar navbar-light">
+  <div class="container">
+    
+    <!-- Show this for logged out users -->
+    <ul *appShowAuthed="false"
+      class="nav navbar-nav pull-xs-right">
+
+      <li class="nav-item">
+        <a class="nav-link"
+          routerLink="/login"
+          routerLinkActive="active">
+          <i class="ion-log-in"></i>&nbsp;Login
+        </a>
+      </li>
+
+      <li class="nav-item">
+        <a class="nav-link"
+          routerLink="/register"
+          routerLinkActive="active">
+          <i class="ion-person-add"></i>&nbsp;Sign up
+        </a>
+      </li>
+
+    </ul>
+
+    <!-- Show this for logged in users -->
+    <ul *appShowAuthed="true"
+      class="nav navbar-nav pull-xs-right">
+
+      <li class="nav-item">
+        <a class="nav-link"
+          routerLink="/chat"
+          routerLinkActive="active">
+          <i class="ion-chatboxes"></i>&nbsp;Chatroom
+        </a>
+      </li>
+
+      <li class="nav-item">
+        <a class="nav-link"
+          routerLink="/logout"
+          routerLinkActive="active">
+          <i class="ion-log-out"></i>&nbsp;Logout
+        </a>
+      </li>
+
+      <li class="nav-item">
+        <a class="nav-link"
+          routerLink="/settings"
+          routerLinkActive="active">
+          <i class="ion-gear-a"></i>&nbsp;Settings
+        </a>
+      </li>
+
+      <li class="nav-item">
+        <span>
+          [ {{ currentUser.username }} ]
+        </span>
+      </li>
+
+    </ul>
+
+  </div>
+</nav>
